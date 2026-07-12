@@ -1,0 +1,16 @@
+node_modules/
+.pnpm-store/
+.next/
+coverage/
+.env*
+!.env.example
+*.key
+*.p12
+*.pem
+*.pfx
+*.log
+.DS_Store
+.turbo/
+.vercel/
+dist/
+*.tsbuildinfo

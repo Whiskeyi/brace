@@ -1,5 +1,32 @@
 import type { z } from "zod";
 
+export type ToolEffect = "read" | "write" | "execute" | "network";
+
+/**
+ * Machine-readable behavior used by the runtime policy and scheduler.
+ * Descriptions are for the model; annotations are the trusted control plane.
+ */
+export interface ToolAnnotations {
+  readonly effect: ToolEffect;
+  readonly idempotent?: boolean;
+  readonly requiresApproval?: boolean;
+  /** Calls with the same key must not execute concurrently. */
+  readonly concurrencyKey?: string;
+}
+
+/** A tool may throw this error when a message is safe to expose to the model. */
+export class AgentToolError extends Error {
+  constructor(
+    message: string,
+    readonly retryable = false,
+    readonly details?: unknown,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "AgentToolError";
+  }
+}
+
 export interface ToolExecutionContext {
   readonly callId: string;
   readonly runId: string;
@@ -12,7 +39,7 @@ export interface AgentTool<TInput = unknown, TOutput = unknown> {
   readonly name: string;
   readonly description: string;
   readonly schema: z.ZodType<TInput>;
-  readonly parameters?: Readonly<Record<string, unknown>>;
+  readonly annotations?: ToolAnnotations;
   execute(
     input: TInput,
     context: ToolExecutionContext,

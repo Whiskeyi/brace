@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import { conversationRepository } from "@/lib/repositories/conversations";
 import { messageRepository } from "@/lib/repositories/messages";
+import { runEventRepository } from "@/lib/repositories/run-events";
+import { runRepository } from "@/lib/repositories/runs";
 
 type Call = [string, ...unknown[]];
 
@@ -66,6 +68,30 @@ describe("tenant-safe repositories", () => {
       conversation_id: "conversation-id",
     });
   });
+
+  it("scopes durable event replay by both owner and run", async () => {
+    const { client, calls } = fluentClient();
+    await runEventRepository(client).list("user-a", "run-a", {
+      afterSequence: 7,
+      limit: 20,
+    });
+    expect(calls).toContainEqual(["from", "agent_run_events"]);
+    expect(calls).toContainEqual(["eq", "user_id", "user-a"]);
+    expect(calls).toContainEqual(["eq", "run_id", "run-a"]);
+    expect(calls).toContainEqual(["gt", "sequence", 7]);
+  });
+
+  it("uses compare-and-set status predicates for run transitions", async () => {
+    const { client, calls } = fluentClient(null);
+    await runRepository(client).transition("user-a", "run-a", {
+      from: ["running"],
+      to: "completed",
+      output: { content: "done" },
+    });
+    expect(calls).toContainEqual(["eq", "user_id", "user-a"]);
+    expect(calls).toContainEqual(["eq", "id", "run-a"]);
+    expect(calls).toContainEqual(["in", "status", ["running"]]);
+  });
 });
 
 describe("database security migration", () => {
@@ -78,6 +104,26 @@ describe("database security migration", () => {
     expect(sql).toContain("auth.uid() = user_id");
     expect(sql).toContain("agent_write_audit_event");
     expect(sql).toContain("revoke all on table");
+    expect(sql).not.toMatch(/drop\s+(database|schema|role|user)/i);
+    expect(sql).not.toMatch(/alter\s+(database|role|user)/i);
+  });
+
+  it("adds atomic run lifecycle RPCs, ordered events, and a single active run", async () => {
+    const path = fileURLToPath(
+      new URL(
+        "../supabase/migrations/003_run_events_and_consistency.sql",
+        import.meta.url,
+      ),
+    );
+    const sql = await readFile(path, "utf8");
+    expect(sql).toContain("agent_runs_one_active_conversation_idx");
+    expect(sql).toContain("create table if not exists public.agent_run_events");
+    expect(sql).toContain("create or replace function public.agent_begin_run");
+    expect(sql).toContain("create or replace function public.agent_finalize_run");
+    expect(sql).toContain("create or replace function public.agent_append_run_events");
+    expect(sql).toContain("create or replace function public.agent_recover_stale_run");
+    expect(sql).toContain("revoke all on table public.agent_runs from authenticated");
+    expect(sql).not.toContain("create policy agent_run_events_insert_own");
     expect(sql).not.toMatch(/drop\s+(database|schema|role|user)/i);
     expect(sql).not.toMatch(/alter\s+(database|role|user)/i);
   });

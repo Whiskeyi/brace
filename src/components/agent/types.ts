@@ -7,6 +7,8 @@ export type Conversation = {
 
 export type ToolActivity = {
   id: string;
+  callId: string;
+  round: number;
   name: string;
   status: "running" | "complete" | "error";
   input?: unknown;
@@ -20,9 +22,8 @@ export type ChatMessage = {
   createdAt: string;
   status?: "streaming" | "complete" | "stopped" | "error";
   tools?: ToolActivity[];
+  requestKey?: string;
 };
 
-export type StreamEvent = {
-  type: string;
-  [key: string]: unknown;
-};
+export type StreamEvent = AgentEvent;
+import type { AgentEvent } from "@/lib/agent/types";

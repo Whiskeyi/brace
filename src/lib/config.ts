@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+import { MAX_AGENT_MODEL_OUTPUT_BYTES } from "./agent/types";
+import {
+  DEFAULT_MODEL_PROVIDER_ID,
+  getModelProvider,
+  inferModelProviderFromBaseUrl,
+  modelProviderIdSchema,
+  resolveModelProvider,
+} from "./model-providers";
+
 const httpUrl = z
   .string()
   .trim()
@@ -59,13 +68,34 @@ export const publicConfigSchema = z.object({
 });
 
 export const serverConfigSchema = publicConfigSchema.extend({
-  SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
+  SUPABASE_SERVICE_ROLE_KEY: secret,
+  LLM_PROVIDER: modelProviderIdSchema.default(DEFAULT_MODEL_PROVIDER_ID),
   LLM_BASE_URL: optionalHttpUrl,
   LLM_API_KEY: optionalModelSecret,
   LLM_MODEL: z.string().trim().min(1).max(200).default("qwen-plus"),
   LLM_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.2),
   LLM_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(1).max(65_536).default(4096),
   AGENT_MAX_TOOL_ROUNDS: z.coerce.number().int().min(1).max(32).default(6),
+  AGENT_MAX_TOOL_CALLS: z.coerce.number().int().min(1).max(256).default(32),
+  AGENT_MAX_TOOL_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  AGENT_MAX_MODEL_OUTPUT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(256)
+    .max(MAX_AGENT_MODEL_OUTPUT_BYTES)
+    .default(1_048_576),
+  AGENT_MAX_TOOL_RESULT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(256)
+    .max(1_048_576)
+    .default(65_536),
+  AGENT_MAX_TOOL_ARGUMENT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(256)
+    .max(1_048_576)
+    .default(32_768),
   AGENT_TOOL_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -84,6 +114,12 @@ export const serverConfigSchema = publicConfigSchema.extend({
     .min(1)
     .max(1_000)
     .default(40),
+  AGENT_CONTEXT_WINDOW_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(2_048)
+    .max(2_000_000)
+    .default(32_768),
   ALIYUN_RAG_BASE_URL: optionalHttpUrl,
   ALIYUN_RAG_API_KEY: optionalSecret,
   ALIYUN_RAG_DATASET_IDS: ragDatasetIds,
@@ -148,19 +184,43 @@ export function getServerConfig(
   }
   // Canonical names win. Legacy names are read only here so callers never need
   // to scatter provider-specific process.env fallbacks across the codebase.
+  const baseUrl =
+    source.LLM_BASE_URL ??
+    source.AGENT_BASE_URL ??
+    source.OPENAI_BASE_URL;
+  const providerId =
+    source.LLM_PROVIDER ??
+    inferModelProviderFromBaseUrl(baseUrl) ??
+    (source.OPENAI_API_KEY || source.OPENAI_MODEL || source.OPENAI_BASE_URL
+      ? "custom"
+      : source.DASHSCOPE_API_KEY
+        ? "bailian-payg"
+        : DEFAULT_MODEL_PROVIDER_ID);
+  const parsedProvider = modelProviderIdSchema.safeParse(providerId);
+  const provider = parsedProvider.success
+    ? getModelProvider(parsedProvider.data)
+    : null;
+  const endpoint = parsedProvider.success
+    ? resolveModelProvider({
+        provider: parsedProvider.data,
+        ...(baseUrl ? { baseUrl } : {}),
+      })
+    : null;
   const normalized = {
     ...source,
+    LLM_PROVIDER: providerId,
     LLM_API_KEY:
-      source.LLM_API_KEY ?? source.DASHSCOPE_API_KEY ?? source.OPENAI_API_KEY,
-    LLM_BASE_URL:
-      source.LLM_BASE_URL ??
-      source.AGENT_BASE_URL ??
-      source.OPENAI_BASE_URL ??
-      (source.DASHSCOPE_API_KEY
-        ? "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        : undefined),
+      source.LLM_API_KEY ??
+      (providerId.startsWith("bailian")
+        ? source.DASHSCOPE_API_KEY ?? source.OPENAI_API_KEY
+        : source.OPENAI_API_KEY ?? source.DASHSCOPE_API_KEY),
+    LLM_BASE_URL: endpoint?.baseUrl ?? baseUrl,
     LLM_MODEL:
-      source.LLM_MODEL ?? source.AGENT_MODEL ?? source.OPENAI_MODEL ?? "qwen-plus",
+      source.LLM_MODEL ??
+      source.AGENT_MODEL ??
+      source.OPENAI_MODEL ??
+      provider?.defaultModel ??
+      "qwen-plus",
   };
   return parseConfig("server", serverConfigSchema, normalized);
 }

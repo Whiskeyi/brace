@@ -1,9 +1,17 @@
-import type { AgentTool, OpenAIToolDefinition, ToolRegistry } from "../tools";
+import type {
+  AgentTool,
+  OpenAIToolDefinition,
+  ToolExecutionContext,
+} from "../tools/types";
+import type { ToolRegistry } from "../tools/registry";
 
 export interface OpenAICompatibleClient {
   readonly chat: {
     readonly completions: {
-      readonly create: (...args: never[]) => unknown;
+      readonly create: (
+        request: ChatCompletionRequest,
+        options?: ChatCompletionRequestOptions,
+      ) => unknown;
     };
   };
 }
@@ -29,6 +37,7 @@ export type AgentMessage =
   | {
       readonly role: "assistant";
       readonly content: string | null;
+      readonly reasoning_content?: string | null;
       readonly tool_calls?: readonly ChatCompletionToolCall[];
     }
   | {
@@ -53,10 +62,12 @@ export interface ChatCompletionRequestOptions {
   readonly signal?: AbortSignal;
 }
 
+/** Raw wire shape accepted from an OpenAI-compatible chat-completions client. */
 export interface ChatCompletionChunk {
   readonly choices?: readonly {
     readonly delta?: {
       readonly content?: string | null;
+      readonly reasoning_content?: string | null;
       readonly tool_calls?: readonly {
         readonly index: number;
         readonly id?: string;
@@ -84,12 +95,64 @@ export interface AgentUsage {
   readonly totalTokens: number;
 }
 
+/** Provider-neutral request consumed by the agent core. */
+export interface AgentModelRequest {
+  readonly messages: readonly AgentMessage[];
+  readonly tools: readonly OpenAIToolDefinition[];
+  readonly temperature?: number;
+  readonly options: Readonly<Record<string, unknown>>;
+}
+
+export interface AgentModelToolCallDelta {
+  readonly index: number;
+  readonly id?: string;
+  readonly name?: string;
+  readonly arguments?: string;
+}
+
+/** Canonical streaming chunk emitted by a model adapter. */
+export interface AgentModelChunk {
+  readonly content?: string;
+  readonly reasoningContent?: string;
+  readonly finishReason?: string | null;
+  readonly toolCalls?: readonly AgentModelToolCallDelta[];
+  readonly usage?: AgentUsage;
+}
+
+export interface AgentModel {
+  readonly id: string;
+  stream(
+    request: AgentModelRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<AsyncIterable<AgentModelChunk>>;
+}
+
+/** Hard ceiling used by the runtime and the shared SSE wire budget. */
+export const MAX_AGENT_MODEL_OUTPUT_BYTES = 16 * 1024 * 1024;
+export const MAX_AGENT_TOOL_ARGUMENT_BYTES = 16 * 1024 * 1024;
+export const MAX_AGENT_TOOL_RESULT_BYTES = 16 * 1024 * 1024;
+
+export interface AgentLimits {
+  readonly maxRounds: number;
+  readonly maxToolCalls: number;
+  readonly maxToolConcurrency: number;
+  readonly maxModelOutputBytes: number;
+  readonly toolTimeoutMs: number;
+  readonly maxToolArgumentBytes: number;
+  readonly maxToolResultBytes: number;
+}
+
 export interface AgentErrorInfo {
   readonly code:
     | "aborted"
+    | "context_window_exceeded"
+    | "invalid_model_response"
     | "invalid_tool_arguments"
     | "llm_error"
     | "max_rounds_exceeded"
+    | "model_output_limit_exceeded"
+    | "tool_call_limit_exceeded"
+    | "tool_denied"
     | "tool_execution_failed"
     | "tool_result_serialization_failed"
     | "tool_timeout"
@@ -99,14 +162,21 @@ export interface AgentErrorInfo {
   readonly details?: unknown;
 }
 
+export const AGENT_EVENT_PROTOCOL_VERSION = 1 as const;
+
 interface AgentEventBase {
+  readonly protocolVersion: typeof AGENT_EVENT_PROTOCOL_VERSION;
+  readonly sequence: number;
+  readonly timestamp: string;
   readonly runId: string;
+  readonly replayed?: boolean;
 }
 
 export interface AgentStartEvent extends AgentEventBase {
   readonly type: "start";
   readonly model: string;
   readonly maxRounds: number;
+  readonly limits: AgentLimits;
 }
 
 export interface AgentDeltaEvent extends AgentEventBase {
@@ -132,6 +202,8 @@ export interface AgentToolResultEvent extends AgentEventBase {
   readonly success: boolean;
   readonly durationMs: number;
   readonly output?: unknown;
+  readonly outputBytes?: number;
+  readonly truncated?: boolean;
   readonly error?: AgentErrorInfo;
 }
 
@@ -172,17 +244,49 @@ export interface AgentRunInput {
   readonly runId?: string;
 }
 
+export interface ToolPolicyRequest {
+  readonly tool: AgentTool;
+  readonly arguments: unknown;
+  readonly context: ToolExecutionContext;
+}
+
+export type ToolPolicyDecision =
+  | { readonly allowed: true }
+  | { readonly allowed: false; readonly reason: string };
+
+export interface ToolPolicy {
+  evaluate(
+    request: ToolPolicyRequest,
+  ): ToolPolicyDecision | PromiseLike<ToolPolicyDecision>;
+}
+
 export interface AgentConfig {
-  readonly client: OpenAICompatibleClient;
-  readonly model: string;
+  /** Use a model adapter for new integrations. */
+  readonly modelProvider?: AgentModel;
+  /** Backward-compatible OpenAI chat-completions composition. */
+  readonly client?: OpenAICompatibleClient;
+  readonly model?: string;
   readonly systemPrompt?: string;
-  /** Omit to use the built-in time and calculator tools; pass [] to disable tools. */
+  /** Tools are injected by the composition root; omission means no tools. */
   readonly tools?: ToolRegistry | readonly AgentTool[];
   readonly maxRounds?: number;
+  readonly maxToolCalls?: number;
+  readonly maxToolConcurrency?: number;
+  readonly maxModelOutputBytes?: number;
   readonly toolTimeoutMs?: number;
+  readonly maxToolArgumentBytes?: number;
+  readonly maxToolResultBytes?: number;
+  /**
+   * Provider context capacity. Set together with reservedOutputTokens to make
+   * the runtime trim complete historical turns before every model round.
+   */
+  readonly contextWindowTokens?: number;
+  readonly reservedOutputTokens?: number;
+  readonly toolPolicy?: ToolPolicy;
   readonly temperature?: number;
   readonly requestOptions?: Readonly<Record<string, unknown>>;
   readonly idGenerator?: () => string;
+  readonly now?: () => Date;
 }
 
 export interface Agent {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type OpenAI from "openai";
 import { z } from "zod";
 
 import {
   createAgent,
+  createOpenAISdkClient,
   encodeAgentEvent,
   type AgentEvent,
   type ChatCompletionChunk,
@@ -42,8 +42,16 @@ async function collect(events: AsyncIterable<AgentEvent>): Promise<AgentEvent[]>
 }
 
 describe("UniversalAgent", () => {
-  it("accepts the official OpenAI client structurally", () => {
-    const build = (client: OpenAI) => createAgent({ client, model: "fake-model" });
+  it("accepts the official OpenAI SDK through its narrow adapter", () => {
+    const build = () =>
+      createAgent({
+        client: createOpenAISdkClient({
+          apiKey: "test-key",
+          baseUrl: "https://models.example.test/v1",
+          timeoutMs: 1_000,
+        }),
+        model: "fake-model",
+      });
     expect(build).toBeTypeOf("function");
   });
 
@@ -250,7 +258,11 @@ describe("UniversalAgent", () => {
     const events = await collect(agent.run("go"));
     expect(events.find((event) => event.type === "tool_result")).toMatchObject({
       success: false,
-      error: { code: "tool_timeout" },
+      error: {
+        code: "tool_timeout",
+        retryable: false,
+        details: { outcome: "indeterminate" },
+      },
     });
     expect(events.at(-1)).toMatchObject({ type: "done", content: "after timeout" });
   });
@@ -313,7 +325,7 @@ describe("UniversalAgent", () => {
       error: { code: "max_rounds_exceeded" },
     });
     expect(encodeAgentEvent(error!)).toBe(
-      `event: error\ndata: ${JSON.stringify(error)}\n\n`,
+      `id: ${error!.sequence}\nevent: error\ndata: ${JSON.stringify(error)}\n\n`,
     );
   });
 });

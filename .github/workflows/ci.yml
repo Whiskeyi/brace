@@ -8,13 +8,61 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
+  CI: true
   NEXT_PUBLIC_SUPABASE_URL: https://supabase.example.com
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anonymous-key-placeholder
+  SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-placeholder
 
 jobs:
-  checks:
+  migrations:
+    name: PostgreSQL migrations
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply and exercise migrations
+        run: |
+          cat \
+            tests/sql/supabase-test-bootstrap.sql \
+            supabase/migrations/001_agent_data.sql \
+            supabase/migrations/002_private_storage.sql \
+            tests/sql/seed-legacy-agent-schema.sql \
+            supabase/migrations/003_run_events_and_consistency.sql \
+            tests/sql/verify-agent-migrations.sql \
+          | docker run --rm --interactive --network host \
+              --env PGPASSWORD=postgres \
+              postgres:16 \
+              psql --host 127.0.0.1 --port 5432 \
+                --username postgres --dbname postgres \
+                --set ON_ERROR_STOP=1
+
+  verify:
+    name: Verify (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x, 24.x]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -28,11 +76,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check English and Chinese README parity
+        run: pnpm docs:check
 
       - name: Type-check
         run: pnpm typecheck
@@ -40,8 +91,141 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test
+      - name: Test with coverage gates
+        run: pnpm test:coverage
+
+  build:
+    name: Production build
+    needs: [migrations, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
+
+      - name: Build desktop bundles
+        run: pnpm desktop:build
+
+  desktop-package:
+    name: macOS desktop package
+    needs: verify
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Package desktop application
+        run: pnpm desktop:dist
+
+      - name: Verify signature, icon, and launch
+        shell: bash
+        run: |
+          app_path="$(find release -maxdepth 2 -type d -name 'Brace.app' -print -quit)"
+          test -n "$app_path"
+          /usr/bin/codesign --verify --deep --strict --verbose=2 "$app_path"
+
+          plist_path="$app_path/Contents/Info.plist"
+          /usr/bin/plutil -lint "$plist_path"
+          icon_file="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$plist_path")"
+          case "$icon_file" in
+            *.icns) ;;
+            *) icon_file="$icon_file.icns" ;;
+          esac
+          packaged_icon="$app_path/Contents/Resources/$icon_file"
+          test -s "$packaged_icon"
+          cmp desktop/assets/base-agent.icns "$packaged_icon"
+
+          launch_log="$RUNNER_TEMP/brace-launch.log"
+          executable="$app_path/Contents/MacOS/Brace"
+          "$executable" --disable-gpu >"$launch_log" 2>&1 &
+          app_pid=$!
+          cleanup() {
+            kill "$app_pid" 2>/dev/null || true
+            wait "$app_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          sleep 5
+          if ! kill -0 "$app_pid" 2>/dev/null; then
+            cat "$launch_log"
+            exit 1
+          fi
+
+  container:
+    name: Container build
+    needs: [migrations, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build standalone image
+        run: >-
+          docker build
+          --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL"
+          --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          --build-arg NEXT_PUBLIC_APP_NAME="Brace"
+          --tag brace:ci
+          .
+
+      - name: Smoke-test container liveness
+        shell: bash
+        run: |
+          docker run --detach \
+            --name brace-smoke \
+            --publish 127.0.0.1:3000:3000 \
+            --env NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+            --env NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+            --env SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+            brace:ci
+          cleanup() {
+            docker logs brace-smoke || true
+            docker rm --force brace-smoke >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:3000/api/health >/dev/null; then
+              exit 0
+            fi
+            if ! docker inspect \
+              --format '{{.State.Running}}' brace-smoke | grep -qx true; then
+              exit 1
+            fi
+            sleep 1
+          done
+          exit 1

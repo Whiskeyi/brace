@@ -55,6 +55,7 @@ export const mapRun = (row: Row): AgentRun => ({
   createdAt: row.created_at as string,
   updatedAt: row.updated_at as string,
   startedAt: (row.started_at as string | null) ?? null,
+  heartbeatAt: (row.heartbeat_at as string | null) ?? null,
   completedAt: (row.completed_at as string | null) ?? null,
 });
 

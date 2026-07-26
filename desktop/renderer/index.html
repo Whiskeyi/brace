@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brace</title>
+    <script src="./preferences.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="inspector-hidden">
+    <div class="window-frame">
+      <header class="window-bar">
+        <div class="window-identity">
+          <span class="app-glyph" aria-hidden="true">
+            <img src="./app-icon.png" alt="" />
+          </span>
+          <span>Brace</span>
+        </div>
+      </header>
+
+      <div class="app-shell">
+        <aside class="sidebar">
+          <div class="sidebar-heading">
+            <h2 data-i18n="sidebar.projects">Projects</h2>
+            <button
+              class="round-button"
+              id="open-project"
+              type="button"
+              title="Open local project"
+              aria-label="Open local project"
+              data-i18n-title="action.openProject"
+              data-i18n-aria-label="action.openProject"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M3 8V5.75C3 4.78 3.78 4 4.75 4h3.1L9.6 5.75h5.65C16.22 5.75 17 6.53 17 7.5V8"></path>
+                <path d="M3.3 8h13.4c.68 0 1.2.62 1.08 1.29l-.92 5.08A2 2 0 0 1 14.89 16H5.11a2 2 0 0 1-1.97-1.63l-.92-5.08A1.1 1.1 0 0 1 3.3 8Z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <section class="side-section project-section">
+            <div id="project-list" class="nav-list"></div>
+          </section>
+
+          <section class="side-section threads-section">
+            <div class="section-heading">
+              <span class="section-label" data-i18n="sidebar.tasks">Tasks</span>
+              <div class="section-heading-actions">
+                <span
+                  class="attention-badge hidden"
+                  id="pending-approval-count"
+                  role="status"
+                  aria-live="polite"
+                ></span>
+                <button
+                  class="quiet-icon-button"
+                  id="new-task"
+                  type="button"
+                  title="New task"
+                  aria-label="New task"
+                  data-i18n-title="action.newTask"
+                  data-i18n-aria-label="action.newTask"
+                >
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M10 4v12M4 10h12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div id="thread-list" class="nav-list thread-list"></div>
+          </section>
+
+          <footer class="sidebar-footer">
+            <button class="settings-button" id="model-settings" type="button">
+              <span class="settings-leading">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <circle cx="10" cy="10" r="2.5"></circle>
+                  <path d="M10 2.75v2m0 10.5v2M17.25 10h-2M4.75 10h-2m12.38-5.13-1.42 1.42M6.29 13.71l-1.42 1.42m10.26 0-1.42-1.42M6.29 6.29 4.87 4.87"></path>
+                </svg>
+                <span data-i18n="action.settings">Settings</span>
+              </span>
+              <span id="model-status" data-i18n="settings.checking"
+                >Checking configuration…</span
+              >
+            </button>
+          </footer>
+        </aside>
+
+        <main class="workspace" id="workspace">
+          <header class="topbar">
+            <div class="topbar-copy">
+              <div class="path-line">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M3.25 6.25h5l1.5 1.5h7v6.5a1.5 1.5 0 0 1-1.5 1.5H4.75a1.5 1.5 0 0 1-1.5-1.5z"></path>
+                </svg>
+                <span id="project-path" data-i18n="project.none"
+                  >No project selected</span
+                >
+              </div>
+              <h1 id="thread-title" data-i18n="thread.start">
+                Start a coding task
+              </h1>
+            </div>
+
+            <div class="toolbar">
+              <label
+                class="mode-control"
+                title="Execution mode for new tasks"
+                data-i18n-title="mode.tooltip"
+              >
+                <span class="sr-only" data-i18n="mode.label"
+                  >Execution mode</span
+                >
+                <select id="execution-mode">
+                  <option value="local" data-i18n="mode.local">
+                    Current directory
+                  </option>
+                  <option value="worktree" data-i18n="mode.worktree">
+                    Isolated Worktree
+                  </option>
+                </select>
+              </label>
+              <button
+                class="toolbar-button"
+                id="open-workspace"
+                type="button"
+                title="Open in Finder"
+                aria-label="Open in Finder"
+                data-i18n-title="action.openWorkspace"
+                data-i18n-aria-label="action.openWorkspace"
+                disabled
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M3.25 6.25h5l1.5 1.5h7v6.5a1.5 1.5 0 0 1-1.5 1.5H4.75a1.5 1.5 0 0 1-1.5-1.5z"></path>
+                  <path d="M12 4.25h3.75V8M15.5 4.5l-5 5"></path>
+                </svg>
+              </button>
+              <button
+                class="toolbar-button"
+                id="show-diff"
+                type="button"
+                title="View workspace diff"
+                aria-label="View workspace diff"
+                data-i18n-title="action.showDiff"
+                data-i18n-aria-label="action.showDiff"
+                disabled
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M6 3.5v8a3 3 0 0 0 3 3h5"></path>
+                  <circle cx="6" cy="3.5" r="1.5"></circle>
+                  <circle cx="14" cy="14.5" r="1.5"></circle>
+                  <path d="M12.5 5.5h4M14.5 3.5v4"></path>
+                </svg>
+              </button>
+              <button
+                class="toolbar-button"
+                id="toggle-preview"
+                type="button"
+                title="Show local web preview"
+                aria-label="Show local web preview"
+                data-i18n-title="action.showPreview"
+                data-i18n-aria-label="action.showPreview"
+                aria-pressed="false"
+                aria-expanded="false"
+                aria-controls="preview-panel"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="2.75" y="3.5" width="14.5" height="10.5" rx="2"></rect>
+                  <path d="M7 16.5h6M10 14v2.5"></path>
+                </svg>
+              </button>
+              <button
+                class="toolbar-button"
+                id="toggle-inspector"
+                type="button"
+                title="Show or hide task details"
+                aria-label="Show or hide task details"
+                data-i18n-title="action.toggleInspector"
+                data-i18n-aria-label="action.toggleInspector"
+                aria-pressed="false"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="2.75" y="3.25" width="14.5" height="13.5" rx="2"></rect>
+                  <path d="M12.5 3.5v13"></path>
+                </svg>
+              </button>
+              <button
+                class="toolbar-button danger"
+                id="cancel-run"
+                type="button"
+                title="Stop current task"
+                aria-label="Stop current task"
+                data-i18n-title="action.stopTask"
+                data-i18n-aria-label="action.stopTask"
+                disabled
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="6" y="6" width="8" height="8" rx="1.5"></rect>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <section class="empty-panel" id="empty-panel">
+            <div class="empty-symbol" aria-hidden="true">
+              <svg viewBox="0 0 48 48">
+                <path d="M24 7.5c1.4 8.2 5.8 12.6 14 14-8.2 1.4-12.6 5.8-14 14-1.4-8.2-5.8-12.6-14-14 8.2-1.4 12.6-5.8 14-14Z"></path>
+                <path d="M38.5 7.5c.5 3 2 4.5 5 5-3 .5-4.5 2-5 5-.5-3-2-4.5-5-5 3-.5 4.5-2 5-5Z"></path>
+              </svg>
+            </div>
+            <h2 id="empty-title" data-i18n="empty.ready.title">
+              What would you like to build?
+            </h2>
+            <p id="empty-description" data-i18n="empty.ready.description">
+              Describe a goal. The agent will understand the project, plan the
+              change, and ask before sensitive actions.
+            </p>
+            <button
+              class="empty-primary hidden"
+              id="connect-model"
+              type="button"
+              aria-describedby="empty-description"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M6.25 9.75V7a3.75 3.75 0 0 1 7.5 0v2.75"></path>
+                <rect x="4.25" y="9.25" width="11.5" height="7.5" rx="2"></rect>
+              </svg>
+              <span data-i18n="action.connectModel">Connect model</span>
+            </button>
+            <button
+              class="empty-primary hidden"
+              id="empty-open-project"
+              type="button"
+              aria-describedby="empty-description"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M3 8V5.75C3 4.78 3.78 4 4.75 4h3.1L9.6 5.75h5.65C16.22 5.75 17 6.53 17 7.5V8"></path>
+                <path d="M3.3 8h13.4c.68 0 1.2.62 1.08 1.29l-.92 5.08A2 2 0 0 1 14.89 16H5.11a2 2 0 0 1-1.97-1.63l-.92-5.08A1.1 1.1 0 0 1 3.3 8Z"></path>
+              </svg>
+              <span data-i18n="action.openProject">Open local project</span>
+            </button>
+            <div class="suggestion-list" id="suggestion-list">
+              <button
+                class="suggestion"
+                type="button"
+                data-prompt="Inspect this project, fix the failing tests, and explain the root cause."
+                data-i18n-prompt="suggestion.fix.prompt"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4 10.5 8 14l8-9"></path>
+                </svg>
+                <span>
+                  <strong data-i18n="suggestion.fix.title"
+                    >Fix failing tests</strong
+                  >
+                  <small data-i18n="suggestion.fix.subtitle"
+                    >Find the cause and verify the fix</small
+                  >
+                </span>
+              </button>
+              <button
+                class="suggestion"
+                type="button"
+                data-prompt="Analyze this codebase's architecture, main modules, and the complete path from instruction to execution."
+                data-i18n-prompt="suggestion.architecture.prompt"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="3" y="3" width="5" height="5" rx="1.25"></rect>
+                  <rect x="12" y="3" width="5" height="5" rx="1.25"></rect>
+                  <rect x="7.5" y="12" width="5" height="5" rx="1.25"></rect>
+                  <path d="M5.5 8v1.5h9V8M10 9.5V12"></path>
+                </svg>
+                <span>
+                  <strong data-i18n="suggestion.architecture.title"
+                    >Understand the architecture</strong
+                  >
+                  <small data-i18n="suggestion.architecture.subtitle"
+                    >Map modules and runtime flow</small
+                  >
+                </span>
+              </button>
+              <button
+                class="suggestion"
+                type="button"
+                data-prompt="Refactor this project while preserving behavior, improve maintainability, and add the necessary tests."
+                data-i18n-prompt="suggestion.refactor.prompt"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M5 5.5h8.5a2 2 0 0 1 2 2v1M15.5 5.5l-2-2m2 2-2 2M15 14.5H6.5a2 2 0 0 1-2-2v-1M4.5 14.5l2 2m-2-2 2-2"></path>
+                </svg>
+                <span>
+                  <strong data-i18n="suggestion.refactor.title"
+                    >Refactor safely</strong
+                  >
+                  <small data-i18n="suggestion.refactor.subtitle"
+                    >Preserve behavior and add tests</small
+                  >
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section
+            class="timeline hidden"
+            id="timeline"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+          ></section>
+
+          <section
+            class="preview-panel hidden"
+            id="preview-panel"
+            role="region"
+            aria-label="Local web preview"
+            data-i18n-aria-label="preview.region"
+            aria-hidden="true"
+          >
+            <header class="preview-toolbar">
+              <form
+                class="preview-address"
+                id="preview-form"
+                aria-label="Open local preview address"
+                data-i18n-aria-label="preview.addressForm"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <circle cx="10" cy="10" r="6.75"></circle>
+                  <path d="M3.5 10h13M10 3.25c2 2 3 4.25 3 6.75s-1 4.75-3 6.75c-2-2-3-4.25-3-6.75s1-4.75 3-6.75Z"></path>
+                </svg>
+                <input
+                  id="preview-url"
+                  type="text"
+                  inputmode="url"
+                  spellcheck="false"
+                  autocomplete="off"
+                  placeholder="http://localhost:3000"
+                  aria-label="Local preview address"
+                  data-i18n-aria-label="preview.address"
+                  aria-describedby="preview-status"
+                  aria-invalid="false"
+                />
+                <button
+                  class="preview-go"
+                  type="submit"
+                  data-i18n="action.open"
+                >
+                  Open
+                </button>
+              </form>
+              <button
+                class="toolbar-button"
+                id="preview-refresh"
+                type="button"
+                title="Refresh preview"
+                aria-label="Refresh preview"
+                data-i18n-title="action.refresh"
+                data-i18n-aria-label="action.refresh"
+                disabled
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M15.75 7.25A6.25 6.25 0 1 0 16 11"></path>
+                  <path d="M15.75 3.75v3.5h-3.5"></path>
+                </svg>
+              </button>
+              <button
+                class="toolbar-button"
+                id="preview-close"
+                type="button"
+                title="Stop and close preview"
+                aria-label="Stop and close preview"
+                data-i18n-title="action.stopPreview"
+                data-i18n-aria-label="action.stopPreview"
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="m6 6 8 8m0-8-8 8"></path>
+                </svg>
+              </button>
+            </header>
+            <div class="preview-viewport">
+              <div class="preview-empty" id="preview-empty">
+                <div class="preview-empty-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="13" rx="2.5"></rect>
+                    <path d="M8 20h8M12 17v3"></path>
+                  </svg>
+                </div>
+                <h2 data-i18n="preview.empty.title">Preview a local app</h2>
+                <p
+                  id="preview-empty-copy"
+                  data-i18n="preview.empty.description"
+                >
+                  Start the project's development server, then enter its
+                  localhost address.
+                </p>
+                <button
+                  class="preview-example"
+                  id="preview-example"
+                  type="button"
+                  data-i18n="preview.empty.example"
+                >
+                  Use localhost:3000
+                </button>
+              </div>
+              <div
+                class="preview-feedback hidden"
+                id="preview-feedback"
+                role="status"
+                aria-live="polite"
+              >
+                <span class="preview-spinner" aria-hidden="true"></span>
+                <span class="preview-feedback-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 8v5"></path>
+                    <circle cx="12" cy="16.5" r=".75"></circle>
+                    <path d="M10.1 4.7 3.7 16a2.2 2.2 0 0 0 1.9 3.3h12.8a2.2 2.2 0 0 0 1.9-3.3L13.9 4.7a2.2 2.2 0 0 0-3.8 0Z"></path>
+                  </svg>
+                </span>
+                <strong
+                  id="preview-feedback-title"
+                  data-i18n="preview.connecting.title"
+                  >Connecting to local service</strong
+                >
+                <p
+                  id="preview-feedback-message"
+                  data-i18n="preview.connecting.description"
+                >
+                  This usually takes only a few seconds.
+                </p>
+                <button
+                  class="preview-retry hidden"
+                  id="preview-retry"
+                  type="button"
+                >
+                  <span data-i18n="action.retry">Reload</span>
+                </button>
+              </div>
+              <iframe
+                class="preview-frame hidden"
+                id="preview-frame"
+                title="Local app preview"
+                data-i18n-title="preview.frameTitle"
+                sandbox="allow-scripts allow-same-origin allow-forms"
+                referrerpolicy="no-referrer"
+                tabindex="-1"
+              ></iframe>
+            </div>
+            <footer class="preview-footer">
+              <span class="preview-status-dot neutral" id="preview-status-dot"></span>
+              <span id="preview-status" role="status" aria-live="polite">
+                <span data-i18n="preview.restricted"
+                  >Only localhost and 127.0.0.1 are allowed</span
+                >
+              </span>
+            </footer>
+          </section>
+
+          <div class="composer-wrap">
+            <section
+              class="task-outcome hidden"
+              id="task-outcome"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <span
+                class="task-outcome-indicator"
+                id="outcome-indicator"
+                aria-hidden="true"
+              ></span>
+              <div class="task-outcome-copy">
+                <strong id="outcome-title">Agent response finished</strong>
+                <span id="outcome-description"
+                  >Review the workspace diff before keeping the result.</span
+                >
+              </div>
+              <div class="task-outcome-actions">
+                <button
+                  class="task-outcome-review"
+                  id="outcome-review"
+                  type="button"
+                  data-i18n="action.reviewChanges"
+                >
+                  Review changes
+                </button>
+                <button
+                  class="task-outcome-next"
+                  id="outcome-next"
+                  type="button"
+                  data-i18n="action.continueTask"
+                >
+                  Continue
+                </button>
+              </div>
+            </section>
+            <form class="composer" id="composer">
+              <textarea
+                id="prompt"
+                rows="3"
+                maxlength="65536"
+                aria-label="Coding task"
+                placeholder="Describe a coding task…"
+                data-i18n-aria-label="composer.task"
+                data-i18n-placeholder="composer.readyPlaceholder"
+              ></textarea>
+              <div class="composer-footer">
+                <div class="composer-state">
+                  <span class="composer-status-dot"></span>
+                  <span id="runtime-status" role="status" aria-live="polite">
+                    <span data-i18n="runtime.waitingForProject"
+                      >Waiting for a project</span
+                    >
+                  </span>
+                </div>
+                <div class="composer-actions">
+                  <span class="keyboard-hint" id="keyboard-hint">⌘ ↵</span>
+                  <button
+                    class="send-button"
+                    id="send-task"
+                    type="submit"
+                    disabled
+                  >
+                    <span data-i18n="action.run">Run</span>
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M10 15.5v-11M5.5 9 10 4.5 14.5 9"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </main>
+
+        <button
+          class="inspector-scrim"
+          id="inspector-scrim"
+          type="button"
+          aria-label="Close task details"
+          data-i18n-aria-label="inspector.close"
+        ></button>
+
+        <aside
+          class="inspector"
+          id="inspector"
+          aria-hidden="true"
+          aria-label="Task details"
+          data-i18n-aria-label="inspector.label"
+        >
+          <header class="inspector-header">
+            <strong data-i18n="inspector.label">Task details</strong>
+            <button
+              class="quiet-icon-button inspector-close"
+              id="inspector-close"
+              type="button"
+              title="Close task details"
+              aria-label="Close task details"
+              data-i18n-title="inspector.close"
+              data-i18n-aria-label="inspector.close"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m6 6 8 8m0-8-8 8"></path>
+              </svg>
+            </button>
+          </header>
+
+          <div class="inspector-content">
+            <section>
+              <div class="section-label" data-i18n="inspector.status">
+                Run status
+              </div>
+              <div class="run-card" id="run-card">
+                <span class="run-state-indicator idle" aria-hidden="true"></span>
+                <div>
+                  <strong data-i18n="inspector.notRun">Not run</strong>
+                  <span data-i18n="inspector.notRunDescription"
+                    >Live progress appears after you submit a task.</span
+                  >
+                </div>
+              </div>
+            </section>
+
+            <section class="hidden" id="worktree-section">
+              <div class="section-label" data-i18n="worktree.title">
+                Isolated worktree
+              </div>
+              <div class="worktree-card">
+                <strong id="worktree-branch">—</strong>
+                <span id="worktree-status">—</span>
+                <div class="worktree-actions">
+                  <button
+                    class="primary"
+                    id="worktree-apply"
+                    type="button"
+                    data-i18n="worktree.apply"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    class="danger"
+                    id="worktree-discard"
+                    type="button"
+                    data-i18n="worktree.discard"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div class="section-label" data-i18n="inspector.approvals">
+                Pending approvals
+              </div>
+              <div
+                id="approval-list"
+                class="approval-list"
+                aria-live="polite"
+              >
+                <div class="muted-card" data-i18n="inspector.noApprovals">
+                  No pending approvals
+                </div>
+              </div>
+            </section>
+
+            <section class="diff-section">
+              <div class="section-heading">
+                <span class="section-label" data-i18n="inspector.diff"
+                  >Workspace diff</span
+                >
+                <span id="diff-meta"></span>
+              </div>
+              <pre id="diff-output" data-i18n="diff.afterRun"
+                >Run a task to inspect uncommitted changes.</pre
+              >
+            </section>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <dialog
+      class="settings-dialog"
+      id="settings-dialog"
+      aria-labelledby="settings-title"
+    >
+      <form id="settings-form">
+        <header>
+          <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
+          <button
+            class="round-button"
+            id="settings-cancel"
+            type="button"
+            aria-label="Close"
+            data-i18n-aria-label="action.close"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="m6 6 8 8m0-8-8 8"></path>
+            </svg>
+          </button>
+        </header>
+
+        <div class="settings-body">
+          <section class="settings-section appearance-settings">
+            <div class="settings-section-heading">
+              <strong data-i18n="settings.appearance.title">Appearance</strong>
+              <small data-i18n="settings.appearance.description"
+                >Changes apply immediately and are saved on this
+                device.</small
+              >
+            </div>
+
+            <div class="preference-grid">
+              <label class="field">
+                <span data-i18n="settings.language">Language</span>
+                <select id="settings-language">
+                  <option value="en" data-i18n="settings.language.en">
+                    English
+                  </option>
+                  <option value="zh-CN" data-i18n="settings.language.zh">
+                    简体中文
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span data-i18n="settings.theme">Theme</span>
+                <select id="settings-theme">
+                  <option value="system" data-i18n="settings.theme.system">
+                    System
+                  </option>
+                  <option value="light" data-i18n="settings.theme.light">
+                    Light
+                  </option>
+                  <option value="dark" data-i18n="settings.theme.dark">
+                    Dark
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            <fieldset class="accent-field">
+              <legend data-i18n="settings.accent">Accent color</legend>
+              <div class="accent-options">
+                <button
+                  class="accent-option"
+                  type="button"
+                  data-accent-value="blue"
+                  title="Blue"
+                  aria-label="Blue"
+                  aria-pressed="true"
+                  data-i18n-title="settings.accent.blue"
+                  data-i18n-aria-label="settings.accent.blue"
+                >
+                  <span class="accent-swatch blue"></span>
+                </button>
+                <button
+                  class="accent-option"
+                  type="button"
+                  data-accent-value="indigo"
+                  title="Indigo"
+                  aria-label="Indigo"
+                  aria-pressed="false"
+                  data-i18n-title="settings.accent.indigo"
+                  data-i18n-aria-label="settings.accent.indigo"
+                >
+                  <span class="accent-swatch indigo"></span>
+                </button>
+                <button
+                  class="accent-option"
+                  type="button"
+                  data-accent-value="purple"
+                  title="Purple"
+                  aria-label="Purple"
+                  aria-pressed="false"
+                  data-i18n-title="settings.accent.purple"
+                  data-i18n-aria-label="settings.accent.purple"
+                >
+                  <span class="accent-swatch purple"></span>
+                </button>
+                <button
+                  class="accent-option"
+                  type="button"
+                  data-accent-value="teal"
+                  title="Teal"
+                  aria-label="Teal"
+                  aria-pressed="false"
+                  data-i18n-title="settings.accent.teal"
+                  data-i18n-aria-label="settings.accent.teal"
+                >
+                  <span class="accent-swatch teal"></span>
+                </button>
+                <button
+                  class="accent-option"
+                  type="button"
+                  data-accent-value="orange"
+                  title="Orange"
+                  aria-label="Orange"
+                  aria-pressed="false"
+                  data-i18n-title="settings.accent.orange"
+                  data-i18n-aria-label="settings.accent.orange"
+                >
+                  <span class="accent-swatch orange"></span>
+                </button>
+              </div>
+            </fieldset>
+          </section>
+
+          <div class="settings-divider"></div>
+          <div class="settings-section-heading model-settings-heading">
+            <strong data-i18n="settings.model.title">Model</strong>
+          </div>
+
+          <label class="field">
+            <span data-i18n="settings.provider">Provider</span>
+            <select id="settings-provider" required></select>
+            <small id="settings-provider-note"></small>
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.baseUrl">Endpoint</span>
+            <input
+              id="settings-base-url"
+              type="url"
+              maxlength="2048"
+              placeholder="https://api.openai.com/v1"
+            />
+            <small
+              id="settings-base-url-note"
+              data-i18n="settings.baseUrl.preset"
+              >Preset endpoints are fixed and validated by Brace.</small
+            >
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.model">Model</span>
+            <input
+              id="settings-model"
+              type="text"
+              maxlength="200"
+              required
+              placeholder="qwen-plus"
+              list="settings-model-options"
+            />
+            <datalist id="settings-model-options"></datalist>
+            <small data-i18n="settings.model.note"
+              >Suggestions are optional; you can enter any model ID supported
+              by the provider.</small
+            >
+          </label>
+
+          <label class="field">
+            <span data-i18n="settings.apiKey">API key</span>
+            <input
+              id="settings-api-key"
+              type="password"
+              minlength="8"
+              maxlength="8192"
+              autocomplete="off"
+              placeholder="Leave blank to keep the existing key"
+              data-i18n-placeholder="settings.apiKey.placeholder"
+            />
+            <small id="settings-key-status" data-i18n="settings.apiKey.none"
+              >No key configured.</small
+            >
+          </label>
+
+          <label class="check-field" id="clear-key-field">
+            <input id="settings-clear-key" type="checkbox" />
+            <span data-i18n="settings.apiKey.remove"
+              >Remove the saved API key</span
+            >
+          </label>
+
+          <div
+            class="security-note"
+            id="settings-security-note"
+            data-i18n="settings.security.secure"
+          >
+            The API key is encrypted by system secure storage in the main
+            process. The page and local task history never read the plaintext.
+          </div>
+          <div
+            class="form-error hidden"
+            id="settings-error"
+            role="alert"
+          ></div>
+          <div
+            class="connection-result hidden"
+            id="settings-connection-result"
+            role="status"
+            aria-live="polite"
+          ></div>
+        </div>
+
+        <footer>
+          <button
+            class="text-button settings-test-button"
+            id="settings-test"
+            type="button"
+          >
+            <span data-i18n="action.testConnection">Test connection</span>
+          </button>
+          <button class="text-button" id="settings-dismiss" type="button">
+            <span data-i18n="action.cancel">Cancel</span>
+          </button>
+          <button class="primary-button" type="submit">
+            <span data-i18n="action.saveSettings">Save settings</span>
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div
+      class="toast hidden"
+      id="toast"
+      role="status"
+      aria-live="polite"
+      aria-hidden="true"
+    ></div>
+    <script src="./rich-text.js"></script>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticateRequest, AuthenticationError } from "@/lib/auth";
 import { conversationRepository } from "@/lib/repositories/conversations";
 import { messageRepository } from "@/lib/repositories/messages";
+import { createServiceRoleSupabaseClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
     const auth = await authenticateRequest(request);
-    const conversations = conversationRepository(auth.supabase);
+    const dataClient = createServiceRoleSupabaseClient();
+    const conversations = conversationRepository(dataClient);
     const idValue = request.nextUrl.searchParams.get("id");
     if (!idValue) {
       const cursor = request.nextUrl.searchParams.get("cursor") || undefined;
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
     if (!conversation) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "会话不存在", requestId } }, { status: 404 });
     }
-    const messages = await messageRepository(auth.supabase).list(auth.userId, id, { limit: 500 });
+    const messages = await messageRepository(dataClient).list(auth.userId, id, { limit: 500 });
     return NextResponse.json({ conversation, messages }, { headers: { "Cache-Control": "no-store", "X-Request-ID": requestId } });
   } catch (error) {
     return errorResponse(error, requestId);
@@ -48,8 +50,9 @@ export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
     const auth = await authenticateRequest(request);
+    const dataClient = createServiceRoleSupabaseClient();
     const input = createSchema.parse(await request.json());
-    const conversation = await conversationRepository(auth.supabase).create(auth.userId, input);
+    const conversation = await conversationRepository(dataClient).create(auth.userId, input);
     return NextResponse.json({ conversation }, { status: 201, headers: { "Cache-Control": "no-store", "X-Request-ID": requestId } });
   } catch (error) {
     return errorResponse(error, requestId);
@@ -60,8 +63,9 @@ export async function DELETE(request: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
     const auth = await authenticateRequest(request);
+    const dataClient = createServiceRoleSupabaseClient();
     const id = idSchema.parse(request.nextUrl.searchParams.get("id"));
-    const removed = await conversationRepository(auth.supabase).remove(auth.userId, id);
+    const removed = await conversationRepository(dataClient).remove(auth.userId, id);
     if (!removed) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "会话不存在", requestId } }, { status: 404 });
     }

@@ -44,7 +44,7 @@ export class ToolRegistry {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: tool.parameters ?? schemaToJsonSchema(tool.schema),
+        parameters: schemaToJsonSchema(tool.schema),
       },
     }));
   }

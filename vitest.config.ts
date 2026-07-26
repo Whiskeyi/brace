@@ -12,7 +12,22 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/lib/**/*.ts"],
+      reportOnFailure: true,
+      include: [
+        "src/lib/agent/{model,runtime,sse,tool-executor}.ts",
+        "src/lib/coding-agent/policy.ts",
+        "src/lib/sandbox/node-process-sandbox.ts",
+        "src/lib/tools/coding/{command,git,tools}.ts",
+        "src/lib/workspace/node-workspace.ts",
+        "src/server/chat/{command,context,run-event-buffer,run-recorder,stream}.ts",
+        "src/server/health/probes.ts",
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 65,
+        functions: 85,
+        lines: 80,
+      },
     },
   },
 });

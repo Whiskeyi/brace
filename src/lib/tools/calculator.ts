@@ -64,6 +64,7 @@ export function createCalculatorTool(
     description:
       "Safely evaluate a numeric expression. Supports arithmetic, parentheses, named numeric variables, and common math functions.",
     schema: calculatorInputSchema,
+    annotations: { effect: "read", idempotent: true },
     execute(input) {
       if (input.expression.length > maxExpressionLength) {
         throw new Error(

@@ -48,6 +48,7 @@ export interface AgentRun {
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;
+  heartbeatAt: string | null;
   completedAt: string | null;
 }
 
@@ -69,6 +70,15 @@ export interface AgentRunStep {
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
+}
+
+export interface AgentRunEvent {
+  runId: string;
+  userId: string;
+  sequence: number;
+  type: string;
+  event: JsonObject;
+  createdAt: string;
 }
 
 export interface LongTermMemory {

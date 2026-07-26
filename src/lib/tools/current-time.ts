@@ -41,6 +41,7 @@ export function createGetCurrentTimeTool(
     description:
       "Get the current date and time in a requested IANA time zone. Use this instead of guessing the time.",
     schema: currentTimeInputSchema,
+    annotations: { effect: "read" },
     execute(input) {
       const date = now();
       if (Number.isNaN(date.getTime())) {

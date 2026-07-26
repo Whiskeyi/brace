@@ -1,24 +1,38 @@
 {
-  "name": "rds-universal-agent",
+  "name": "brace",
   "version": "0.1.0",
   "private": true,
+  "main": "dist-desktop/main.cjs",
+  "author": "Whiskeyi",
   "license": "MIT",
-  "description": "Production-minded universal agent runtime for Alibaba Cloud RDS AI Application Platform (Supabase).",
+  "description": "Local-first desktop coding agent with a provider-neutral core and optional Supabase cloud control plane.",
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "desktop",
+    "developer-tools",
+    "electron",
+    "local-first"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Whiskeyi/base-agent.git"
+    "url": "git+https://github.com/Whiskeyi/brace.git"
   },
   "bugs": {
-    "url": "https://github.com/Whiskeyi/base-agent/issues"
+    "url": "https://github.com/Whiskeyi/brace/issues"
   },
-  "homepage": "https://github.com/Whiskeyi/base-agent#readme",
+  "homepage": "https://github.com/Whiskeyi/brace#readme",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "desktop:dev": "pnpm desktop:build && electron .",
+    "desktop:dist": "pnpm desktop:build && node scripts/package-desktop.mjs",
+    "docs:check": "node scripts/check-readme-parity.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -27,6 +41,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.2",
+    "dotenv": "^17.4.2",
     "next": "16.2.10",
     "openai": "6.46.0",
     "react": "19.2.7",
@@ -35,10 +50,14 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@electron/fuses": "2.1.3",
+    "@electron/packager": "^20.0.4",
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "4.1.10",
+    "electron": "^43.2.0",
+    "esbuild": "^0.28.1",
     "eslint": "9.39.1",
     "eslint-config-next": "16.2.10",
     "jsdom": "29.1.1",

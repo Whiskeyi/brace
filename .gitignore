@@ -13,4 +13,7 @@ coverage/
 .turbo/
 .vercel/
 dist/
+dist-desktop/
+release/
+.desktop-staging/
 *.tsbuildinfo

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { decodeAgentEvents } from "@/lib/agent/sse";
 import { AuthPanel } from "./auth-panel";
 import { Composer } from "./composer";
 import { EmptyState } from "./empty-state";
@@ -26,12 +27,28 @@ function normalizeConversation(value: Record<string, unknown>): Conversation {
 function normalizeMessage(value: Record<string, unknown>): ChatMessage | null {
   const role = value.role;
   if (role !== "user" && role !== "assistant") return null;
+  const metadata = value.metadata && typeof value.metadata === "object"
+    ? value.metadata as Record<string, unknown>
+    : {};
+  const storedStatus = metadata.status;
+  const status: ChatMessage["status"] = role === "user"
+    ? "complete"
+    : storedStatus === "failed"
+      ? "error"
+      : storedStatus === "stopped"
+        ? "stopped"
+        : "complete";
   return {
     id: String(value.id),
     role,
     content: String(value.content || ""),
     createdAt: String(value.createdAt || value.created_at || new Date().toISOString()),
-    status: "complete",
+    status,
+    requestKey: typeof metadata.idempotencyKey === "string"
+      ? metadata.idempotencyKey
+      : typeof metadata.requestKey === "string"
+        ? metadata.requestKey
+        : undefined,
   };
 }
 
@@ -52,19 +69,15 @@ async function apiFetch<T>(path: string, accessToken: string, init?: RequestInit
   return data as T;
 }
 
-function eventText(event: StreamEvent) {
-  for (const key of ["delta", "content", "text"]) {
-    if (typeof event[key] === "string") return event[key] as string;
-  }
-  return "";
-}
-
 function toolFromEvent(event: StreamEvent): ToolActivity {
+  if (event.type !== "tool_call") throw new Error("Expected a tool_call event");
   return {
-    id: String(event.toolCallId || event.callId || event.id || makeId("tool")),
-    name: String(event.toolName || event.name || "工具"),
+    id: `${event.round}:${event.callId}`,
+    callId: event.callId,
+    round: event.round,
+    name: event.name,
     status: "running",
-    input: event.input ?? event.arguments ?? event.args,
+    input: event.arguments ?? event.rawArguments,
   };
 }
 
@@ -145,16 +158,20 @@ export function AgentWorkspace() {
     }
   }, [busy, createConversation, currentId, token]);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (
+    content: string,
+    options: { readonly idempotencyKey?: string; readonly appendUser?: boolean } = {},
+  ) => {
     if (!token || busy) return;
     setNotice(null);
     setBusy(true);
 
     const now = new Date().toISOString();
-    const userMessage: ChatMessage = { id: makeId("user"), role: "user", content, createdAt: now, status: "complete" };
+    const idempotencyKey = options.idempotencyKey ?? makeId("msg");
+    const userMessage: ChatMessage = { id: makeId("user"), role: "user", content, createdAt: now, status: "complete", requestKey: idempotencyKey };
     const assistantId = makeId("assistant");
-    const assistantMessage: ChatMessage = { id: assistantId, role: "assistant", content: "", createdAt: now, status: "streaming", tools: [] };
-    setMessages((items) => [...items, userMessage, assistantMessage]);
+    const assistantMessage: ChatMessage = { id: assistantId, role: "assistant", content: "", createdAt: now, status: "streaming", tools: [], requestKey: idempotencyKey };
+    setMessages((items) => [...items, ...(options.appendUser === false ? [] : [userMessage]), assistantMessage]);
 
     let conversationId = currentId;
     try {
@@ -172,7 +189,6 @@ export function AgentWorkspace() {
 
       const controller = new AbortController();
       abortRef.current = controller;
-      const idempotencyKey = makeId("msg");
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -191,40 +207,36 @@ export function AgentWorkspace() {
         throw new Error(message || `Agent 请求失败（${response.status}）`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      let terminal = false;
 
       const applyEvent = (event: StreamEvent) => {
         setMessages((items) => items.map((item) => {
           if (item.id !== assistantId) return item;
-          if (event.type === "delta") return { ...item, content: item.content + eventText(event) };
+          if (event.type === "delta") return { ...item, content: item.content + event.delta };
           if (event.type === "tool_call") return { ...item, tools: [...(item.tools || []), toolFromEvent(event)] };
           if (event.type === "tool_result") {
-            const id = String(event.toolCallId || event.callId || event.id || "");
-            const tools = (item.tools || []).map((tool) => tool.id === id || (!id && tool.status === "running") ? { ...tool, status: event.error ? "error" as const : "complete" as const, output: event.output ?? event.result ?? event.error } : tool);
+            const tools = (item.tools || []).map((tool) =>
+              tool.callId === event.callId && tool.round === event.round
+                ? {
+                    ...tool,
+                    status: event.success ? "complete" as const : "error" as const,
+                    output: event.output ?? event.error,
+                  }
+                : tool
+            );
             return { ...item, tools };
           }
-          if (event.type === "done") return { ...item, status: "complete" as const };
+          if (event.type === "done") return { ...item, content: event.content || item.content, status: "complete" as const };
           if (event.type === "error") return { ...item, status: "error" as const };
           return item;
         }));
       };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-        const frames = buffer.split("\n\n");
-        buffer = frames.pop() || "";
-        for (const frame of frames) {
-          const payload = frame.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
-          if (!payload || payload === "[DONE]") continue;
-          try { applyEvent(JSON.parse(payload) as StreamEvent); } catch { /* Ignore malformed server heartbeats. */ }
-        }
-        if (done) break;
+      for await (const event of decodeAgentEvents(response.body)) {
+        applyEvent(event);
+        if (event.type === "done" || event.type === "error") terminal = true;
       }
-
-      setMessages((items) => items.map((item) => item.id === assistantId && item.status === "streaming" ? { ...item, status: "complete" } : item));
+      if (!terminal) throw new Error("Agent 事件流在完成前意外中断");
       setConversations((items) => items.map((item) => item.id === conversationId ? { ...item, updatedAt: new Date().toISOString() } : item));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -244,7 +256,9 @@ export function AgentWorkspace() {
     const lastUser = [...messages].reverse().find((message) => message.role === "user");
     if (!lastUser || busy) return;
     setMessages((items) => items.filter((item) => item.status !== "error"));
-    void sendMessage(lastUser.content);
+    void sendMessage(lastUser.content, {
+      appendUser: false,
+    });
   }, [busy, messages, sendMessage]);
 
   if (auth.loading) return <SplashScreen />;

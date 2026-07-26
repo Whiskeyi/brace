@@ -13,8 +13,9 @@ function assertAccessToken(accessToken: string): string {
 }
 
 /**
- * Server-side anon client scoped by the caller's JWT. RLS remains authoritative.
- * This client is for user-facing request handlers, not background work.
+ * Server-side anon client scoped by the caller's JWT. It is used to verify
+ * identity; application business data uses the separately owner-filtered
+ * Service Role data plane.
  */
 export function createUserSupabaseClient(accessToken: string): SupabaseClient {
   const config = getPublicConfig();

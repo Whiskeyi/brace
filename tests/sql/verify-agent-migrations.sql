@@ -356,7 +356,7 @@ begin
   end if;
 
   if (
-    select status
+    select steps.status
     from public.agent_run_steps as steps
     join public.agent_runs as runs on runs.id = steps.run_id
     where runs.idempotency_key = 'integration-run-complete'

@@ -6,7 +6,7 @@ Participation in this project is governed by the [Code of Conduct](CODE_OF_CONDU
 
 ## Development setup
 
-1. Install Node.js 22.12 or newer and pnpm 11. If you use nvm, run `nvm use`.
+1. Install Node.js 22.13 or newer (excluding Node.js 23) and pnpm 11. If you use nvm, run `nvm use`.
 2. Fork and clone the repository.
 3. Run `pnpm install --frozen-lockfile`.
 4. Copy `.env.example` to `.env.local` and add only your own development credentials.

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![Node.js](https://img.shields.io/badge/Node.js-22.13%2B-339933?logo=nodedotjs&logoColor=white)](package.json)
 
 Brace 是一个 Codex 风格的桌面编码客户端，由与提供商无关的智能体运行时提供支持。Electron 客户端可打开本地仓库、执行有边界的编码任务、在写入或执行命令前暂停请求授权、将任务历史持久化到本地 SQLite，并可在 Git worktree 中隔离工作。现有的 Next.js/Supabase 应用仍可作为可选的云端控制平面和网页聊天适配器使用。
 
@@ -63,7 +63,7 @@ flowchart TB
 
 ## 前置条件
 
-- Node.js 22.12 或更高版本
+- Node.js 22.13 或更高版本（不支持 Node.js 23）
 - pnpm 11
 - 对于网页应用：已启用 Supabase 的阿里云 RDS AI Application Platform 项目
 - OpenAI-compatible 模型 API key，或另一种 `AgentModel` 实现

@@ -60,7 +60,7 @@ const failures = [];
 const expectedBadges = [
   "[![CI](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml)",
   "[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)",
-  "[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](package.json)",
+  "[![Node.js](https://img.shields.io/badge/Node.js-22.13%2B-339933?logo=nodedotjs&logoColor=white)](package.json)",
 ];
 
 function extractHeadings(markdown) {

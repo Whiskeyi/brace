@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiskeyi/brace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![Node.js](https://img.shields.io/badge/Node.js-22.13%2B-339933?logo=nodedotjs&logoColor=white)](package.json)
 
 Brace is a Codex-style desktop coding client backed by a provider-neutral agent runtime. The Electron client opens local repositories, runs bounded coding tasks, pauses for write/command approval, persists task history to local SQLite, and can isolate work in Git worktrees. The existing Next.js/Supabase application remains available as an optional cloud control plane and web-chat adapter.
 
@@ -63,7 +63,7 @@ The core does not read environment variables, choose tenants, or open a workspac
 
 ## Prerequisites
 
-- Node.js 22.12 or newer
+- Node.js 22.13 or newer (Node.js 23 is not supported)
 - pnpm 11
 - For the web application: an Alibaba Cloud RDS AI Application Platform project with Supabase enabled
 - An OpenAI-compatible model API key, or another `AgentModel` implementation

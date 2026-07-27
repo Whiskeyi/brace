@@ -58,10 +58,10 @@
     "@vitest/coverage-v8": "4.1.10",
     "electron": "^43.2.0",
     "esbuild": "^0.28.1",
-    "eslint": "9.39.1",
-    "eslint-config-next": "16.2.10",
-    "jsdom": "29.1.1",
-    "typescript": "5.9.3",
+    "eslint": "10.8.0",
+    "eslint-config-next": "16.2.12",
+    "jsdom": "30.0.0",
+    "typescript": "7.0.2",
     "vitest": "4.1.10"
   },
   "packageManager": "pnpm@11.7.0"

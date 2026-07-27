@@ -18,6 +18,17 @@ Brace 是一个 Codex 风格的桌面编码客户端，由与提供商无关的�
 
 有关生命周期、持久化和信任边界，请参阅[架构指南](docs/architecture.md)。
 
+## 桌面界面
+
+<p align="center">
+  <img src="docs/images/brace-workspace-dark.jpg" alt="Brace 深色模式桌面工作区" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/images/brace-settings-dark.jpg" alt="Brace 模型与外观设置" width="49%">
+  <img src="docs/images/brace-task-inspector-dark.jpg" alt="显示运行状态、待审批操作和工作区差异的 Brace 任务检查器" width="49%">
+</p>
+
 ## 已实现的功能
 
 | 范围 | 实现 |

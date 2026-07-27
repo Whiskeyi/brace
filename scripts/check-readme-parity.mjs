@@ -16,6 +16,7 @@ const documents = {
 };
 
 const headingPairs = [
+  ["##", "Desktop preview", "桌面界面"],
   ["##", "What is implemented", "已实现的功能"],
   ["##", "Architecture at a glance", "架构概览"],
   ["##", "Prerequisites", "前置条件"],

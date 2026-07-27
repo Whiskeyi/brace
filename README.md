@@ -18,6 +18,17 @@ The repository has three deliberately separate composition roots:
 
 See [the architecture guide](docs/architecture.md) for lifecycle, persistence, and trust-boundary details.
 
+## Desktop preview
+
+<p align="center">
+  <img src="docs/images/brace-workspace-dark.jpg" alt="Brace desktop workspace in dark mode" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/images/brace-settings-dark.jpg" alt="Brace model and appearance settings" width="49%">
+  <img src="docs/images/brace-task-inspector-dark.jpg" alt="Brace task inspector with run status, approvals, and workspace diff" width="49%">
+</p>
+
 ## What is implemented
 
 | Area | Implementation |

@@ -1,10 +1,43 @@
+import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTypeScript from "eslint-config-next/typescript";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  ...nextVitals,
-  ...nextTypeScript,
+  globalIgnores([
+    ".desktop-staging/**",
+    ".pnpm-store/**",
+    "coverage/**",
+    "dist-desktop/**",
+    "node_modules/**",
+    "release/**",
+  ]),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ["**/*.{js,mjs,ts}"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+  {
+    files: ["src/lib/tools/coding/git.ts"],
+    rules: {
+      "no-control-regex": "off",
+    },
+  },
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "require-yield": "off",
+    },
+  },
   {
     files: ["src/lib/agent/**/*.ts"],
     rules: {
@@ -37,9 +70,6 @@ export default defineConfig([
                 "@/lib/sandbox/*",
                 "@/lib/workspace",
                 "@/lib/workspace/*",
-                "@/server/*",
-                "@/app/*",
-                "@/components/*",
               ],
               message:
                 "Agent core cannot depend on host, adapter, or product composition layers.",
@@ -120,11 +150,4 @@ export default defineConfig([
       ],
     },
   },
-  globalIgnores([
-    ".next/**",
-    "coverage/**",
-    "dist/**",
-    "dist-desktop/**",
-    "release/**",
-  ]),
 ]);

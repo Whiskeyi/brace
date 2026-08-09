@@ -26,7 +26,6 @@ body:
       label: Affected area
       options:
         - Desktop client
-        - Web application
         - Agent runtime
         - Model provider integration
         - Workspace or sandbox

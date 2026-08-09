@@ -1,1 +1,0 @@
-export { createUserSupabaseClient } from "./server";

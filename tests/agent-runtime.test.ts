@@ -4,7 +4,6 @@ import { z } from "zod";
 import {
   createAgent,
   createOpenAISdkClient,
-  encodeAgentEvent,
   type AgentEvent,
   type ChatCompletionChunk,
   type ChatCompletionRequest,
@@ -282,7 +281,7 @@ describe("UniversalAgent", () => {
     expect(requests).toHaveLength(0);
   });
 
-  it("returns max-round and SSE events in typed form", async () => {
+  it("returns max-round failures in typed form", async () => {
     const { client } = fakeClient([
       [
         {
@@ -319,13 +318,9 @@ describe("UniversalAgent", () => {
     });
 
     const events = await collect(agent.run("loop"));
-    const error = events.at(-1);
-    expect(error).toMatchObject({
+    expect(events.at(-1)).toMatchObject({
       type: "error",
       error: { code: "max_rounds_exceeded" },
     });
-    expect(encodeAgentEvent(error!)).toBe(
-      `id: ${error!.sequence}\nevent: error\ndata: ${JSON.stringify(error)}\n\n`,
-    );
   });
 });

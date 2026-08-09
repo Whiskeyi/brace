@@ -10,7 +10,7 @@ Participation in this project is governed by the [Code of Conduct](CODE_OF_CONDU
 2. Fork and clone the repository.
 3. Run `pnpm install --frozen-lockfile`.
 4. Copy `.env.example` to `.env.local` and add only your own development credentials.
-5. Run `pnpm desktop:dev` for the local-first desktop client, or `pnpm dev` for the optional web application.
+5. Run `pnpm dev` to build and launch the desktop client.
 
 Never commit credentials, real cloud resource identifiers, customer data, or environment-specific deployment reports.
 
@@ -26,10 +26,9 @@ pnpm typecheck
 pnpm lint
 pnpm test:coverage
 pnpm build
-pnpm desktop:build
 ```
 
-On macOS, also run `pnpm desktop:dist` when changing desktop packaging, application metadata, icons, signing, or launch behavior.
+On macOS, also run `pnpm dist` when changing desktop packaging, application metadata, icons, signing, or launch behavior.
 
 Describe what changed, why it is needed, and any security or deployment impact. Link related issues when available.
 Target pull requests at `main`, and do not include credentials, customer data, local databases, or generated release artifacts.

@@ -1,6 +1,5 @@
 node_modules/
 .pnpm-store/
-.next/
 coverage/
 .env*
 !.env.example
@@ -10,8 +9,6 @@ coverage/
 *.pfx
 *.log
 .DS_Store
-.turbo/
-.vercel/
 dist/
 dist-desktop/
 release/

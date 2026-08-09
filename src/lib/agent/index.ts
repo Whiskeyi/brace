@@ -3,7 +3,6 @@ export * from "./model";
 export * from "./model-probe";
 export * from "./openai-sdk";
 export * from "./runtime";
-export * from "./sse";
 export * from "./stream-supervisor";
 export * from "./tool-executor";
 export * from "./types";

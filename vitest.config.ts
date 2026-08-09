@@ -14,13 +14,11 @@ export default defineConfig({
       reporter: ["text", "html"],
       reportOnFailure: true,
       include: [
-        "src/lib/agent/{model,runtime,sse,tool-executor}.ts",
+        "src/lib/agent/{model,runtime,tool-executor}.ts",
         "src/lib/coding-agent/policy.ts",
         "src/lib/sandbox/node-process-sandbox.ts",
         "src/lib/tools/coding/{command,git,tools}.ts",
-        "src/lib/workspace/node-workspace.ts",
-        "src/server/chat/{command,context,run-event-buffer,run-recorder,stream}.ts",
-        "src/server/health/probes.ts",
+        "src/lib/workspace/node-workspace.ts"
       ],
       thresholds: {
         statements: 80,

@@ -127,7 +127,7 @@ export interface AgentModel {
   ): Promise<AsyncIterable<AgentModelChunk>>;
 }
 
-/** Hard ceiling used by the runtime and the shared SSE wire budget. */
+/** Hard ceilings used by the runtime for model and tool payloads. */
 export const MAX_AGENT_MODEL_OUTPUT_BYTES = 16 * 1024 * 1024;
 export const MAX_AGENT_TOOL_ARGUMENT_BYTES = 16 * 1024 * 1024;
 export const MAX_AGENT_TOOL_RESULT_BYTES = 16 * 1024 * 1024;

@@ -5,7 +5,7 @@
   "main": "dist-desktop/main.cjs",
   "author": "Whiskeyi",
   "license": "MIT",
-  "description": "Local-first desktop coding agent with a provider-neutral core and optional Supabase cloud control plane.",
+  "description": "Local-first Electron coding agent with a provider-neutral runtime.",
   "keywords": [
     "ai",
     "coding-agent",
@@ -26,9 +26,10 @@
     "node": "^22.13.0 || >=24.0.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "pnpm desktop:dev",
+    "build": "pnpm desktop:build",
+    "start": "electron .",
+    "dist": "pnpm desktop:dist",
     "desktop:build": "node scripts/build-desktop.mjs",
     "desktop:dev": "pnpm desktop:build && electron .",
     "desktop:dist": "pnpm desktop:build && node scripts/package-desktop.mjs",
@@ -40,28 +41,23 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.110.2",
     "dotenv": "^17.4.2",
-    "next": "16.2.11",
     "openai": "6.46.0",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-    "server-only": "0.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.1",
     "@electron/fuses": "2.1.3",
     "@electron/packager": "^20.0.4",
     "@types/node": "26.1.1",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "4.1.10",
     "electron": "^43.2.0",
     "esbuild": "^0.28.1",
     "eslint": "9.39.1",
-    "eslint-config-next": "16.2.10",
+    "globals": "16.4.0",
     "jsdom": "29.1.1",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.63.0",
     "vitest": "4.1.10"
   },
   "packageManager": "pnpm@11.7.0"

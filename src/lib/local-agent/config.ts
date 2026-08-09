@@ -62,9 +62,8 @@ export const localAgentConfigSchema = z
       .min(1_000)
       .max(3_600_000)
       .default(600_000),
-    // Desktop threads use the same bounded-history contract as the web
-    // runtime. The current user message is always included in addition to
-    // these completed history messages.
+    // The current user message is always included in addition to these
+    // completed history messages.
     AGENT_MAX_HISTORY_MESSAGES: z.coerce
       .number()
       .int()

@@ -17,43 +17,26 @@ const documents = {
 
 const headingPairs = [
   ["##", "Desktop preview", "桌面界面"],
-  ["##", "What is implemented", "已实现的功能"],
-  ["##", "Architecture at a glance", "架构概览"],
-  ["##", "Prerequisites", "前置条件"],
-  ["##", "Run the desktop client", "运行桌面客户端"],
-  [
-    "###",
-    "Model providers, plans, and connection testing",
-    "模型提供商、计划与连接测试",
-  ],
-  ["###", "Preview a local Web application", "预览本地 Web 应用"],
-  ["##", "Run the web application", "运行网页应用"],
-  ["###", "Runtime limits", "运行时限制"],
-  ["###", "Optional integrations", "可选集成"],
-  ["##", "Use the headless coding agent", "使用无界面编码智能体"],
-  ["##", "Durable web-run lifecycle", "持久化网页运行生命周期"],
-  ["##", "Health and deployment", "健康检查与部署"],
+  ["##", "What is included", "已实现"],
+  ["##", "Architecture", "架构"],
+  ["##", "Requirements", "环境要求"],
+  ["##", "Run locally", "本地运行"],
+  ["##", "Model providers", "模型提供商"],
+  ["##", "Safety model", "安全模型"],
   ["##", "Verify", "验证"],
-  ["##", "Project layout", "项目布局"],
-  ["##", "Security boundary and known limits", "安全边界与已知限制"],
-  ["##", "Official references", "官方参考"],
-  ["##", "Contributing, security, and license", "贡献、安全与许可"],
+  ["##", "Project layout", "项目结构"],
+  ["##", "Contributing and license", "贡献与许可"],
 ];
 
 const capabilityPairs = [
-  ["Agent core", "智能体核心"],
-  ["Model adapters", "模型适配器"],
-  ["Coding workspace", "编码工作区"],
-  ["Controlled execution", "受控执行"],
-  ["Tool authorization", "工具授权"],
-  ["Event protocol", "事件协议"],
-  ["Desktop client", "桌面客户端"],
-  ["Local durability", "本地持久化"],
+  ["Desktop shell", "桌面外壳"],
+  ["Agent runtime", "Agent 运行时"],
+  ["Coding tools", "编码工具"],
+  ["Local persistence", "本地持久化"],
+  ["Approvals", "审批"],
   ["Worktree isolation", "Worktree 隔离"],
-  ["Durable runs", "持久化运行"],
-  ["Context", "上下文"],
-  ["Identity and isolation", "身份与隔离"],
-  ["Optional data tools", "可选数据工具"],
+  ["Local preview", "本地预览"],
+  ["Model providers", "模型提供商"],
   ["Delivery", "交付"],
 ];
 
@@ -175,10 +158,10 @@ reportMismatch(
 
 reportMismatch(
   "Implemented capability rows",
-  readCapabilityNames(documents.english, "What is implemented").map(
+  readCapabilityNames(documents.english, "What is included").map(
     (english, index) => [
       english,
-      readCapabilityNames(documents.chinese, "已实现的功能")[index],
+      readCapabilityNames(documents.chinese, "已实现")[index],
     ],
   ),
   capabilityPairs,

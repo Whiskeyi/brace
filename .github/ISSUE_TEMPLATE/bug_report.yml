@@ -13,7 +13,6 @@ body:
       label: Component
       options:
         - Desktop client
-        - Web application
         - Agent runtime
         - Model provider integration
         - Workspace or sandbox
